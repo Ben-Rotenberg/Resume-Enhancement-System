@@ -1,0 +1,10 @@
+langchain==0.1.13
+langchain-core==0.1.29
+langchain-openai==0.1.5
+langchain-community==0.0.31
+langchain-text-splitters==0.0.1
+langgraph==0.0.43
+streamlit==1.32.2
+pydantic==2.6.1
+pypdf==4.0.2
+reportlab==4.0.9
