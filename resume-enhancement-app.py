@@ -1,4 +1,11 @@
-import os
+# Agent 3: Chat Interviewer
+class ChatInterviewer:
+    def __init__(self, resume_content, resume_analysis, interview_questions):
+        self.resume_content = resume_content
+        self.resume_analysis = resume_analysis
+        self.interview_questions = interview_questions
+        self.llm = create_llm(temperature=0.7)
+        self.system_prompt = f"""You are an AI interviewer named Alex conducting a friendly conversation to help improve theimport os
 import streamlit as st
 import tempfile
 from pathlib import Path
@@ -26,18 +33,30 @@ from pydantic import BaseModel, Field
 # Configure page
 st.set_page_config(page_title="Resume Enhancement System", layout="wide")
 
-# State management
+# State management using session state for better persistence
+if 'resume_content' not in st.session_state:
+    st.session_state.resume_content = None
+if 'resume_analysis' not in st.session_state:
+    st.session_state.resume_analysis = None
+if 'interview_questions' not in st.session_state:
+    st.session_state.interview_questions = None
+if 'interview_chat_history' not in st.session_state:
+    st.session_state.interview_chat_history = []
+if 'interview_insights' not in st.session_state:
+    st.session_state.interview_insights = None
+if 'enhanced_resume' not in st.session_state:
+    st.session_state.enhanced_resume = None
+if 'verification_result' not in st.session_state:
+    st.session_state.verification_result = None
+if 'current_step' not in st.session_state:
+    st.session_state.current_step = "upload"
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = None
+
 class AppState:
     def __init__(self):
-        self.resume_content = None
-        self.resume_analysis = None
-        self.interview_questions = None
-        self.interview_chat_history = []
-        self.interview_insights = None
-        self.enhanced_resume = None
-        self.verification_result = None
-        self.current_step = "upload"  # upload, analysis, interview, enhancement, verification, download
-        self.api_key = None
+        # Legacy class for backward compatibility
+        pass
 
 app_state = AppState()
 
@@ -49,7 +68,7 @@ def render_sidebar():
     # API Key input
     api_key = st.sidebar.text_input("OpenAI API Key", type="password", key="api_key_input")
     if api_key:
-        app_state.api_key = api_key
+        st.session_state.api_key = api_key
         os.environ["OPENAI_API_KEY"] = api_key
     
     st.sidebar.markdown("---")
@@ -57,7 +76,7 @@ def render_sidebar():
     # Progress tracker
     st.sidebar.subheader("Progress")
     steps = ["Resume Upload", "Analysis", "Interview", "Enhancement", "Verification", "Download"]
-    current_step_index = ["upload", "analysis", "interview", "enhancement", "verification", "download"].index(app_state.current_step)
+    current_step_index = ["upload", "analysis", "interview", "enhancement", "verification", "download"].index(st.session_state.current_step)
     
     for i, step in enumerate(steps):
         if i < current_step_index:
@@ -105,14 +124,14 @@ def text_to_pdf(text, filename):
 # LangChain agent definitions
 def create_llm(temperature=0):
     """Create an LLM with the provided API key"""
-    if not app_state.api_key:
+    if not st.session_state.api_key:
         st.error("Please provide an OpenAI API key in the sidebar")
         st.stop()
     
     return ChatOpenAI(
         model="gpt-4o",
         temperature=temperature,
-        api_key=app_state.api_key
+        api_key=st.session_state.api_key
     )
 
 # Agent 1: Resume Analyzer
@@ -337,52 +356,52 @@ def main():
             st.warning("Please enter your OpenAI API key in the sidebar before proceeding.")
     
     # Analysis step
-    elif app_state.current_step == "analysis":
+    elif st.session_state.current_step == "analysis":
         st.title("Resume Analysis")
         
-        if not app_state.resume_analysis:
+        if not st.session_state.resume_analysis:
             with st.spinner("Analyzing your resume..."):
-                app_state.resume_analysis = analyze_resume(app_state.resume_content)
+                st.session_state.resume_analysis = analyze_resume(st.session_state.resume_content)
         
         st.markdown("### Resume Analysis")
-        st.markdown(app_state.resume_analysis)
+        st.markdown(st.session_state.resume_analysis)
         
-        if not app_state.interview_questions:
+        if not st.session_state.interview_questions:
             with st.spinner("Generating interview questions..."):
-                app_state.interview_questions = generate_interview_questions(
-                    app_state.resume_content, app_state.resume_analysis
+                st.session_state.interview_questions = generate_interview_questions(
+                    st.session_state.resume_content, st.session_state.resume_analysis
                 )
         
         st.markdown("### Interview Questions")
-        st.markdown(app_state.interview_questions)
+        st.markdown(st.session_state.interview_questions)
         
-        if st.button("Continue to Interview"):
-            app_state.current_step = "interview"
+        if st.button("Continue to Interview", key="to_interview"):
+            st.session_state.current_step = "interview"
             st.rerun()
     
     # Interview step
-    elif app_state.current_step == "interview":
+    elif st.session_state.current_step == "interview":
         st.title("Interview Chat")
         st.markdown("Chat with our AI interviewer to help enhance your resume. The interviewer will ask questions to gather additional information about your experience and skills.")
         
         # Initialize interviewer if not already done
-        if not hasattr(app_state, "interviewer"):
-            app_state.interviewer = ChatInterviewer(
-                app_state.resume_content,
-                app_state.resume_analysis,
-                app_state.interview_questions
+        if "interviewer" not in st.session_state:
+            st.session_state.interviewer = ChatInterviewer(
+                st.session_state.resume_content,
+                st.session_state.resume_analysis,
+                st.session_state.interview_questions
             )
         
         # Initialize chat history if empty
-        if not app_state.interview_chat_history:
+        if not st.session_state.interview_chat_history:
             initial_message = {
                 "role": "assistant", 
                 "content": "Hi there! I'm Alex, and I'll be chatting with you today to help enhance your resume. I've reviewed your current resume and noticed some areas we could expand on. Let's have a conversation about your experience and skills to gather more details. How does that sound?"
             }
-            app_state.interview_chat_history.append(initial_message)
+            st.session_state.interview_chat_history.append(initial_message)
         
         # Display chat history
-        for message in app_state.interview_chat_history:
+        for message in st.session_state.interview_chat_history:
             if message["role"] == "user":
                 st.chat_message("user").write(message["content"])
             else:
@@ -392,15 +411,15 @@ def main():
         user_input = st.chat_input("Type your message here...")
         if user_input:
             # Add user message to chat history
-            app_state.interview_chat_history.append({"role": "user", "content": user_input})
+            st.session_state.interview_chat_history.append({"role": "user", "content": user_input})
             st.chat_message("user").write(user_input)
             
             # Get response from interviewer
             with st.spinner("Thinking..."):
-                response = app_state.interviewer.get_response(app_state.interview_chat_history)
+                response = st.session_state.interviewer.get_response(st.session_state.interview_chat_history)
             
             # Add assistant response to chat history
-            app_state.interview_chat_history.append({"role": "assistant", "content": response})
+            st.session_state.interview_chat_history.append({"role": "assistant", "content": response})
             st.chat_message("assistant").write(response)
             
             # Force UI refresh
@@ -409,73 +428,73 @@ def main():
         # Finish interview button
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
-            if len(app_state.interview_chat_history) > 3:  # At least 2 user responses
-                if st.button("Finish Interview"):
-                    app_state.current_step = "enhancement"
+            if len(st.session_state.interview_chat_history) > 3:  # At least 2 user responses
+                if st.button("Finish Interview", key="finish_interview"):
+                    st.session_state.current_step = "enhancement"
                     st.rerun()
     
     # Enhancement step
-    elif app_state.current_step == "enhancement":
+    elif st.session_state.current_step == "enhancement":
         st.title("Resume Enhancement")
         
-        if not app_state.interview_insights:
+        if not st.session_state.interview_insights:
             with st.spinner("Generating insights from interview..."):
-                app_state.interview_insights = generate_insights(
-                    app_state.resume_content, 
-                    app_state.interview_chat_history
+                st.session_state.interview_insights = generate_insights(
+                    st.session_state.resume_content, 
+                    st.session_state.interview_chat_history
                 )
         
         st.markdown("### Insights from Interview")
-        st.markdown(app_state.interview_insights)
+        st.markdown(st.session_state.interview_insights)
         
-        if not app_state.enhanced_resume:
+        if not st.session_state.enhanced_resume:
             with st.spinner("Creating enhanced resume..."):
-                app_state.enhanced_resume = enhance_resume(
-                    app_state.resume_content,
-                    app_state.interview_insights
+                st.session_state.enhanced_resume = enhance_resume(
+                    st.session_state.resume_content,
+                    st.session_state.interview_insights
                 )
         
         st.markdown("### Enhanced Resume Draft")
-        st.markdown(app_state.enhanced_resume)
+        st.markdown(st.session_state.enhanced_resume)
         
-        if st.button("Continue to Verification"):
-            app_state.current_step = "verification"
+        if st.button("Continue to Verification", key="to_verification"):
+            st.session_state.current_step = "verification"
             st.rerun()
     
     # Verification step
-    elif app_state.current_step == "verification":
+    elif st.session_state.current_step == "verification":
         st.title("Resume Verification")
         
-        if not app_state.verification_result:
+        if not st.session_state.verification_result:
             with st.spinner("Verifying enhanced resume for accuracy..."):
-                app_state.verification_result = verify_resume(
-                    app_state.resume_content,
-                    app_state.enhanced_resume
+                st.session_state.verification_result = verify_resume(
+                    st.session_state.resume_content,
+                    st.session_state.enhanced_resume
                 )
                 
                 # Check if verification result contains a corrected resume
                 # This is a simple heuristic - if the verification result is long, it likely contains a corrected resume
-                if len(app_state.verification_result.split()) > 200:
+                if len(st.session_state.verification_result.split()) > 200:
                     # Extract the corrected resume from the verification result
-                    app_state.enhanced_resume = app_state.verification_result
-                    app_state.verification_result = "The enhanced resume has been verified and corrected for accuracy."
+                    st.session_state.enhanced_resume = st.session_state.verification_result
+                    st.session_state.verification_result = "The enhanced resume has been verified and corrected for accuracy."
         
         st.markdown("### Verification Result")
-        st.markdown(app_state.verification_result)
+        st.markdown(st.session_state.verification_result)
         
         st.markdown("### Final Enhanced Resume")
-        st.markdown(app_state.enhanced_resume)
+        st.markdown(st.session_state.enhanced_resume)
         
-        if st.button("Continue to Download"):
-            app_state.current_step = "download"
+        if st.button("Continue to Download", key="to_download"):
+            st.session_state.current_step = "download"
             st.rerun()
     
     # Download step
-    elif app_state.current_step == "download":
+    elif st.session_state.current_step == "download":
         st.title("Download Enhanced Resume")
         
         st.markdown("### Final Enhanced Resume")
-        st.markdown(app_state.enhanced_resume)
+        st.markdown(st.session_state.enhanced_resume)
         
         st.markdown("### Download Options")
         
@@ -485,29 +504,41 @@ def main():
             # Text download
             st.download_button(
                 label="Download as Text",
-                data=app_state.enhanced_resume,
+                data=st.session_state.enhanced_resume,
                 file_name="enhanced_resume.txt",
-                mime="text/plain"
+                mime="text/plain",
+                key="download_txt"
             )
         
         with col2:
             # PDF download
-            pdf_data = text_to_pdf(app_state.enhanced_resume, "enhanced_resume.pdf")
+            pdf_data = text_to_pdf(st.session_state.enhanced_resume, "enhanced_resume.pdf")
             st.download_button(
                 label="Download as PDF",
                 data=pdf_data,
                 file_name="enhanced_resume.pdf",
-                mime="application/pdf"
+                mime="application/pdf",
+                key="download_pdf"
             )
         
         # Copy to clipboard option
         st.markdown("### Copy to Clipboard")
-        st.code(app_state.enhanced_resume)
+        st.code(st.session_state.enhanced_resume)
         
         # Start over button
-        if st.button("Start Over with a New Resume"):
+        if st.button("Start Over with a New Resume", key="start_over"):
             # Reset the state
-            app_state.__init__()
+            for key in list(st.session_state.keys()):
+                if key != 'api_key':
+                    del st.session_state[key]
+            st.session_state.resume_content = None
+            st.session_state.resume_analysis = None
+            st.session_state.interview_questions = None
+            st.session_state.interview_chat_history = []
+            st.session_state.interview_insights = None
+            st.session_state.enhanced_resume = None
+            st.session_state.verification_result = None
+            st.session_state.current_step = "upload"
             st.rerun()
 
 if __name__ == "__main__":
