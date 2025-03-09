@@ -327,7 +327,7 @@ def main():
                     
                     # Move to the next step
                     app_state.current_step = "analysis"
-                    st.experimental_rerun()
+                    st.rerun()
                     
                 except Exception as e:
                     st.error(f"Error processing file: {str(e)}")
@@ -356,7 +356,7 @@ def main():
         
         if st.button("Continue to Interview"):
             app_state.current_step = "interview"
-            st.experimental_rerun()
+            st.rerun()
     
     # Interview step
     elif app_state.current_step == "interview":
@@ -402,7 +402,7 @@ def main():
             st.chat_message("assistant").write(response)
             
             # Force UI refresh
-            st.experimental_rerun()
+            st.rerun()
         
         # Finish interview button
         col1, col2, col3 = st.columns([1, 1, 1])
@@ -410,7 +410,7 @@ def main():
             if len(app_state.interview_chat_history) > 3:  # At least 2 user responses
                 if st.button("Finish Interview"):
                     app_state.current_step = "enhancement"
-                    st.experimental_rerun()
+                    st.rerun()
     
     # Enhancement step
     elif app_state.current_step == "enhancement":
@@ -438,7 +438,7 @@ def main():
         
         if st.button("Continue to Verification"):
             app_state.current_step = "verification"
-            st.experimental_rerun()
+            st.rerun()
     
     # Verification step
     elif app_state.current_step == "verification":
@@ -466,7 +466,7 @@ def main():
         
         if st.button("Continue to Download"):
             app_state.current_step = "download"
-            st.experimental_rerun()
+            st.rerun()
     
     # Download step
     elif app_state.current_step == "download":
@@ -506,7 +506,7 @@ def main():
         if st.button("Start Over with a New Resume"):
             # Reset the state
             app_state.__init__()
-            st.experimental_rerun()
+            st.rerun()
 
 if __name__ == "__main__":
     main()
