@@ -325,9 +325,11 @@ def main():
                     # Clean up the temporary file
                     os.unlink(file_path)
                     
-                    # Move to the next step
-                    app_state.current_step = "analysis"
-                    st.rerun()
+                    # Add a button to proceed
+                    if st.button("Start Analysis"):
+                        # Move to the next step
+                        app_state.current_step = "analysis"
+                        st.rerun()
                     
                 except Exception as e:
                     st.error(f"Error processing file: {str(e)}")
